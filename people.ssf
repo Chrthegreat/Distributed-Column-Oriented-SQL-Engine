@@ -1,0 +1,5 @@
+id: int64 key 
+name: string
+age: int64
+height: int64
+country: string
