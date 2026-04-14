@@ -1,73 +1,168 @@
-MiniDist: Distributed Column-Oriented SQL Engine
+# MiniDist: Distributed Column-Oriented SQL Engine
 
-***Overview***
-MiniDist is a simplified distributed analytical SQL engine implemented in Python. It includes a custom columnar storage layer, a distributed coordinator–worker architecture, and query optimizations such as Zone Map pruning.
+## Overview
 
-***How to Use***
-Unzip and run the code. There are no external packages, all includes are from basic python. I used Python 3.10.2 so I can't guarantee backwards compatibility.
+MiniDist is a simplified distributed analytical SQL engine implemented in Python. It includes:
 
-***Initialize a Table***
-First you need to run the minidist.py. This provides 2 commands, init and load. 
-For each table you need to provide a schema file where you list every column and its type of data. Check the examples. 
-Init takes 2 arguments. The table directory (where the table will be saved) and the ssf file for the table.
+- A custom columnar storage layer  
+- A distributed coordinator–worker architecture  
+- Query optimizations such as Zone Map pruning  
 
-Example init: 
-    -> python minidist.py init data/people people.ssf
+---
 
-A new directory will be created with the schema file copied and a table.txt file with useful metadata. 
-In table.txt you will find segment_target_rows controlling number of rows per segment. The default is 100000 per segment. 
-You can also use a parameter in load to determine the number of segments
+## How to Use
 
-Then you need to run load command. You must provide the path to the table directory (the one you just created using init) and the csv file with the data. Optionally you decide
-how many partitions you will have for the data by passing an optional argument. If not, the default will be used defined in the metadata _table.txt
+Unzip and run the code. No external packages are required — all dependencies are from standard Python.
 
-Example load: 
-    -> python minidist.py load data/people --csv people.csv (--segments n)
+Tested with Python 3.10.2 (backwards compatibility is not guaranteed).
 
-You will now see some seg-000001, seg-000002 ... folders created. Each one of these will be assigned to 1 worker.
+---
 
-***Starting the Cluster***
-In order to run the workers you have 2 choices. Run each worker seperately (you will need mupltiple terminals),
-or run them all at once using cluster.py. 
+## Initialize a Table
 
-Cluster.py takes 2 arguments, the table path (example: data/people) and the port for the first worker.
+Run `minidist.py` to initialize and load tables. It provides two commands:
 
-Example cluster: 
-    -> python cluster.py --table data/people --port 5050
+- `init`
+- `load`
 
-***Running queries***
-To run queries, you need to run the coordinator that accepts queries and assignes them to the workers.
+Each table requires a schema file (`.ssf`) defining column names and data types (see examples).
 
-This takes 2 argumnets as well, the table path and the port of the first workers (so it knows where to look)
+### Init Command
 
-Example coordinator:  
-    -> python coordinator.py --table data/people --port 5050
+Arguments:
+1. Table directory (where the table will be stored)  
+2. Schema file  
 
-A promt will show up DIST-SQL>... 
+Example:
 
-***Commands Supported***
--SELECT 
--FROM
--WHERE (=,>,<,>=,<=, BETWEEN,AND)
--GROUB BY with COUNT, SUM, AVG, MIN, MAX
+```bash
+python minidist.py init data/people people.ssf
+```
 
-***Query Examples***
-Using the example dataset called people. Adjust to your dataset.
+This creates:
+- A new table directory  
+- A copy of the schema file  
+- A `table.txt` file with metadata  
 
--> SELECT * FROM people;
--> SELECT name, country FROM people;
--> SELECT * FROM people WHERE age > 50;
--> SELECT name, age FROM people WHERE country = 'JP';
--> SELECT * FROM people WHERE height BETWEEN 180 AND 190;
--> SELECT COUNT(id), MIN(age), MAX(height) FROM people;
--> SELECT AVG(height) FROM people;
--> SELECT country, COUNT(id) FROM people GROUP BY country;
--> SELECT country, AVG(age), MAX(height) FROM people GROUP BY country;
--> SELECT * FROM people WHERE id < 5;
--> SELECT * FROM people WHERE id > 1000;
--> SELECT * FROM people WHERE age = 24;
--> SELECT country, height, age, name, id FROM people;
+### Metadata
 
-***Exit coordinator***
+Inside `table.txt`:
 
-To exit type exit or quit. To stop cluster do Ctrl+c.
+- `segment_target_rows`: controls rows per segment (default: 100000)
+
+---
+
+## Load Data
+
+Load data into the initialized table.
+
+Arguments:
+1. Path to table directory  
+2. CSV file  
+3. (Optional) Number of segments  
+
+Example:
+
+```bash
+python minidist.py load data/people --csv people.csv --segments n
+```
+
+If `--segments` is not provided, the default from metadata is used.
+
+After loading, directories like:
+
+```
+seg-000001
+seg-000002
+...
+```
+
+will be created. Each segment is assigned to one worker.
+
+---
+
+## Starting the Cluster
+
+You can:
+
+- Run workers manually (multiple terminals), or  
+- Start all workers using `cluster.py`  
+
+### Cluster Command
+
+Arguments:
+1. Table path  
+2. Port for the first worker  
+
+Example:
+
+```bash
+python cluster.py --table data/people --port 5050
+```
+
+---
+
+## Running Queries
+
+Start the coordinator to accept and distribute queries.
+
+### Coordinator Command
+
+Arguments:
+1. Table path  
+2. Port of the first worker  
+
+Example:
+
+```bash
+python coordinator.py --table data/people --port 5050
+```
+
+You will see a prompt:
+
+```
+DIST-SQL>
+```
+
+---
+
+## Commands Supported
+
+- SELECT  
+- FROM  
+- WHERE (`=`, `>`, `<`, `>=`, `<=`, `BETWEEN`, `AND`)  
+- GROUP BY with:
+  - COUNT  
+  - SUM  
+  - AVG  
+  - MIN  
+  - MAX  
+
+---
+
+## Query Examples
+
+Using the example dataset `people`:
+
+```sql
+SELECT * FROM people;
+SELECT name, country FROM people;
+SELECT * FROM people WHERE age > 50;
+SELECT name, age FROM people WHERE country = 'JP';
+SELECT * FROM people WHERE height BETWEEN 180 AND 190;
+SELECT COUNT(id), MIN(age), MAX(height) FROM people;
+SELECT AVG(height) FROM people;
+SELECT country, COUNT(id) FROM people GROUP BY country;
+SELECT country, AVG(age), MAX(height) FROM people GROUP BY country;
+SELECT * FROM people WHERE id < 5;
+SELECT * FROM people WHERE id > 1000;
+SELECT * FROM people WHERE age = 24;
+SELECT country, height, age, name, id FROM people;
+```
+
+---
+
+## Exit
+
+- To exit the coordinator: type `exit` or `quit`  
+- To stop the cluster: press `Ctrl + C`  
